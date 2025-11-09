@@ -50,8 +50,14 @@ BASE_DIR = Path(__file__).parent
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
+# Load environment variables
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
 # TMDB API Configuration
-TMDB_API_KEY = "824517fc3eeb54a8859418c6c4b71775"  # Keep as fallback if needed
+TMDB_API_KEY = os.getenv('TMDB_API_KEY', '824517fc3eeb54a8859418c6c4b71775')  # Fallback to hardcoded key if not in .env
 TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/"
 
 class TMDBClient:
@@ -84,12 +90,14 @@ class TMDBClient:
             max_retries: Maximum retry attempts
             
         Returns:
-            Parsed JSON response
+            Parsed JSON response or dict with error information
             
         Raises:
             HTTPException: If all retries fail
         """
-        # Initialize params and headers
+        import random
+        from urllib.parse import urljoin, urlencode
+        
         params = params or {}
         params['api_key'] = self.api_key
         headers = {
@@ -102,17 +110,20 @@ class TMDBClient:
         endpoint = endpoint.lstrip('/')
         url = f"{base_url}/{endpoint}"
         
-        # Initialize last exception
+        # For GET requests, include params in the URL if there's already a query string
+        if '?' in endpoint:
+            url = f"{url}&{urlencode(params)}"
+            params = {}
+        
         last_exception = None
         
-        # Retry loop
         for attempt in range(max_retries):
             try:
                 # Get or create session
                 session = await self.get_session()
                 
                 # Log the request
-                logger.debug(f"Request attempt {attempt + 1}/{max_retries}: {url} with params: {params}")
+                print(f"Attempt {attempt + 1}/{max_retries}: {url} with params: {params}")
                 
                 # Make request with timeout
                 timeout = aiohttp.ClientTimeout(total=10)
@@ -122,105 +133,47 @@ class TMDBClient:
                     headers=headers,
                     timeout=timeout
                 ) as response:
+                    response_text = await response.text()
+                    print(f"Response status: {response.status}")
+                    print(f"Response headers: {dict(response.headers)}")
+                    print(f"Response content: {response_text[:200]}...")  # Print first 200 chars
                     
-                    # Make the request
-                    async with session.get(
-                        url,
-                        params=params,
-                        headers={
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json;charset=utf-8'
-                        },
-                        timeout=aiohttp.ClientTimeout(total=10)
-                    ) as response:
-                        # Handle successful response
-                        if response.status == 200:
+                    if response.status == 200:
+                        try:
                             return await response.json()
+                        except Exception as e:
+                            print(f"Error parsing JSON response: {e}")
+                            print(f"Response text: {response_text}")
+                            return {"results": []}
                             
-                        # Handle rate limiting
-                        if response.status == 429:
-                            retry_after = int(response.headers.get('Retry-After', 1))
-                            print(f"Rate limited. Waiting {retry_after} seconds...")
-                            await asyncio.sleep(retry_after)
+                    elif response.status == 204:  # No Content
+                        print(f"Received 204 No Content from TMDB API for {endpoint}")
+                        return {"results": []}  # Return empty results to prevent errors
+                            
+                    elif response.status == 429:  # Rate limit hit
+                        retry_after = int(response.headers.get('Retry-After', 5))
+                        print(f"Rate limited. Retrying after {retry_after} seconds...")
+                        await asyncio.sleep(retry_after)
+                        
+                        continue
+                            
+                    else:
+                        error_msg = f"Error in _make_request (attempt {attempt + 1}/{max_retries}): {response.status} - {response_text}"
+                        print(error_msg)
+                        
+                        if attempt < max_retries - 1 and response.status >= 500:
+                            # Exponential backoff with jitter
+                            backoff = (2 ** attempt) + random.uniform(0, 1)
+                            print(f"Retrying in {backoff:.2f} seconds...")
+                            await asyncio.sleep(backoff)
                             continue
-                        
-                        # Handle other errors
-                        error_text = await response.text()
-                        print(f"TMDB API error: {response.status} - {error_text}")
-                        
-                        if attempt == max_retries - 1:
-                            raise HTTPException(
-                                status_code=response.status,
-                                detail=f"TMDB API error: {response.status} - {error_text}"
-                            )
-                        
-                        # Exponential backoff
-                        backoff = 1 + random.random() * (2 ** attempt)
-                        print(f"Retrying in {backoff:.2f} seconds...")
-                        await asyncio.sleep(backoff)
+                            
+                        return {
+                            "status_code": response.status, 
+                            "status_message": f"Error making request: {response_text}",
+                            "results": []  # Ensure empty results to prevent template errors
+                        }
             
-            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
-                last_exception = e
-                print(f"Request failed (attempt {attempt + 1}/{max_retries}): {str(e)}")
-                
-                if attempt == max_retries - 1:
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"Failed to fetch data from TMDB after {max_retries} attempts: {str(e)}"
-                    )
-                
-                # Exponential backoff for network errors
-                backoff = 1 + random.random() * (2 ** attempt)
-                print(f"Retrying in {backoff:.2f} seconds...")
-                await asyncio.sleep(backoff)
-        
-        # This should never be reached due to the raise in the except block
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to fetch data from TMDB after {max_retries} attempts"
-        ) 
-                        headers=headers, 
-                        timeout=aiohttp.ClientTimeout(total=15)
-                    ) as response:
-                        response_text = await response.text()
-                        print(f"Response status: {response.status}")
-                        print(f"Response headers: {dict(response.headers)}")
-                        print(f"Response content: {response_text[:200]}...")  # Print first 200 chars
-                        
-                        if response.status == 200:
-                            try:
-                                return await response.json()
-                            except Exception as e:
-                                print(f"Error parsing JSON response: {e}")
-                                print(f"Response text: {response_text}")
-                                return {"results": []}
-                                
-                        elif response.status == 204:  # No Content
-                            print(f"Received 204 No Content from TMDB API for {endpoint}")
-                            return {"results": []}  # Return empty results to prevent errors
-                            
-                        elif response.status == 429:  # Rate limit hit
-                            retry_after = int(response.headers.get('Retry-After', 5))
-                            print(f"Rate limited. Retrying after {retry_after} seconds...")
-                            await asyncio.sleep(retry_after)
-                            continue
-                            
-                        else:
-                            error_msg = f"Error in _make_request (attempt {attempt + 1}/{max_retries}): {response.status} - {response_text}"
-                            print(error_msg)
-                            
-                            if attempt < max_retries - 1 and response.status >= 500:
-                                # Exponential backoff with jitter
-                                backoff = (2 ** attempt) + random.uniform(0, 1)
-                                print(f"Retrying in {backoff:.2f} seconds...")
-                                await asyncio.sleep(backoff)
-                                continue
-                                
-                            return {
-                                "status_code": response.status, 
-                                "status_message": f"Error making request: {response_text}",
-                                "results": []  # Ensure empty results to prevent template errors
-                            }
             except (aiohttp.ClientError, asyncio.TimeoutError) as e:
                 last_exception = e
                 print(f"Request failed (attempt {attempt + 1}/{max_retries}): {str(e)}")
@@ -229,6 +182,7 @@ class TMDBClient:
                     backoff = (2 ** attempt) + random.uniform(0, 1)
                     await asyncio.sleep(backoff)
                 continue
+                
             except Exception as e:
                 last_exception = e
                 error_msg = f"Unexpected error in _make_request (attempt {attempt + 1}/{max_retries}): {str(e)}"
@@ -242,10 +196,10 @@ class TMDBClient:
         # If we've exhausted all retries
         error_msg = str(last_exception) if last_exception else "Unknown error"
         print(f"All {max_retries} attempts failed. Last error: {error_msg}")
-        return {
-            "status_code": 500, 
-            "status_message": f"Error making request after {max_retries} attempts: {error_msg}"
-        }
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch data from TMDB after {max_retries} attempts: {error_msg}"
+        )
 
     async def get_trending(self, media_type: str = "all", time_window: str = "day") -> List[Dict]:
         endpoint = f"trending/{media_type}/{time_window}"
@@ -356,14 +310,29 @@ async def get_top_rated_movies(page: int = 1):
     return JSONResponse({"results": results})
 
 # Static files for favicon
-@app.get('/favicon.ico', include_in_schema=False)
+@app.get("/favicon.ico")
+@app.get("/favicon.png")
 async def favicon():
-    from fastapi.responses import FileResponse
-    import os
-    favicon_path = os.path.join(BASE_DIR, "static", "favicon.ico")
-    if os.path.exists(favicon_path):
-        return FileResponse(favicon_path)
-    return ""
+    try:
+        # Try .ico first
+        favicon_path = os.path.join(BASE_DIR, "static", "favicon.ico")
+        if os.path.exists(favicon_path):
+            return FileResponse(favicon_path, media_type="image/x-icon")
+            
+        # Then try .png
+        favicon_path = os.path.join(BASE_DIR, "static", "favicon.png")
+        if os.path.exists(favicon_path):
+            return FileResponse(favicon_path, media_type="image/png")
+            
+        # If no favicon found, return a transparent 1x1 pixel
+        from fastapi.responses import Response
+        return Response(content=b"", media_type="image/x-icon")
+        
+    except Exception as e:
+        print(f"Error serving favicon: {str(e)}")
+        # Return empty response with 200 status to prevent 500 errors
+        from fastapi.responses import Response
+        return Response(content=b"", media_type="image/x-icon")
 
 # Frontend Routes
 @app.get("/", response_class=HTMLResponse)
@@ -376,27 +345,44 @@ async def read_root(request: Request):
         trending_tv = {"results": []}
         popular_movies = {"results": []}
         top_rated_movies = {"results": []}
+        error_message = None
         
-        # Get data with individual error handling for each API call
         try:
-            trending_movies = await tmdb_client.get_trending("movie", "day") or {"results": []}
-        except Exception as e:
-            logger.error(f"Error getting trending movies: {str(e)}")
+            # Get data with individual error handling for each API call
+            tasks = [
+                tmdb_client.get_trending("movie", "day"),
+                tmdb_client.get_trending("tv", "day"),
+                tmdb_client.get_popular_movies(),
+                tmdb_client.get_top_rated_movies()
+            ]
             
-        try:
-            trending_tv = await tmdb_client.get_trending("tv", "day") or {"results": []}
-        except Exception as e:
-            logger.error(f"Error getting trending TV: {str(e)}")
+            # Run all API calls concurrently
+            results = await asyncio.gather(*tasks, return_exceptions=True)
             
-        try:
-            popular_movies = await tmdb_client.get_popular_movies() or {"results": []}
+            # Process results
+            if not isinstance(results[0], Exception):
+                trending_movies = results[0] or {"results": []}
+            else:
+                logger.error(f"Error getting trending movies: {str(results[0])}")
+                
+            if not isinstance(results[1], Exception):
+                trending_tv = results[1] or {"results": []}
+            else:
+                logger.error(f"Error getting trending TV: {str(results[1])}")
+                
+            if not isinstance(results[2], Exception):
+                popular_movies = results[2] or {"results": []}
+            else:
+                logger.error(f"Error getting popular movies: {str(results[2])}")
+                
+            if not isinstance(results[3], Exception):
+                top_rated_movies = results[3] or {"results": []}
+            else:
+                logger.error(f"Error getting top rated movies: {str(results[3])}")
+                
         except Exception as e:
-            logger.error(f"Error getting popular movies: {str(e)}")
-            
-        try:
-            top_rated_movies = await tmdb_client.get_top_rated_movies() or {"results": []}
-        except Exception as e:
-            logger.error(f"Error getting top rated movies: {str(e)}")
+            error_message = f"Error fetching data: {str(e)}"
+            logger.error(error_message)
         
         # Log the data being sent to the template
         logger.info(f"Sending data to template - Movies: {len(trending_movies.get('results', []))}, TV: {len(trending_tv.get('results', []))}")

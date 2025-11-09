@@ -90,6 +90,19 @@ class OpenAIService:
         Returns:
             Dict containing streaming recommendations and reasoning
         """
+        try:
+            # Create the prompt for the API
+            prompt = f"""
+            Provide streaming recommendations for this {'movie' if content_type == 'movie' else 'TV show'}:
+            
+            Title: {title}
+            Year: {year if year else 'N/A'}
+            
+            Please provide:
+            1. Where to watch it (streaming platforms)
+            2. Similar content recommendations
+            3. Why someone might enjoy it
+            """
             
             # Call OpenAI API
             response = openai.ChatCompletion.create(
