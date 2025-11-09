@@ -272,6 +272,11 @@ class TMDBClient:
 # Initialize TMDB client with API key
 tmdb_client = TMDBClient(api_key=TMDB_API_KEY)
 
+# Test Endpoint
+@app.get("/test")
+async def test():
+    return {"message": "Test endpoint working"}
+
 # Health Check Endpoint
 @app.get("/health")
 async def health_check():
