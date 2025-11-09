@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# Environment variables
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test and coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Local development
+.DS_Store
+*.log
+
+# Unnecessary files for deployment
+ai_movie_app_clean.py
+app.py
+app_flask.py
+comprehensive_movie_database.py
+config.example.py
+indian_movies_dataset.csv
+movie_database_generator.py
+movie_posters.py
+movie_recommender.py
+requirements_flask.txt
+test_system.py
+README_flask.md
+DEPLOYMENT_GUIDE.md
+*.csv
+*.xlsx
+*.db
+*.sqlite3

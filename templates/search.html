@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}Search - Cinextma{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Search Results */
+    .search-results {
+        padding: 2rem 0;
+    }
+    
+    .search-header {
+        margin-bottom: 2rem;
+    }
+    
+    .search-query {
+        color: #e50914;
+        font-weight: 600;
+    }
+    
+    .results-count {
+        color: rgba(255, 255, 255, 0.7);
+        margin-top: 0.5rem;
+    }
+    
+    .results-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .result-card {
+        position: relative;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .result-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+    
+    .result-poster {
+        width: 100%;
+        height: 270px;
+        object-fit: cover;
+        border-radius: 0.5rem;
+    }
+    
+    .result-info {
+        padding: 1rem 0;
+    }
+    
+    .result-title {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .result-meta {
+        display: flex;
+        align-items: center;
+        font-size: 0.875rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .result-rating {
+        display: flex;
+        align-items: center;
+        margin-right: 0.75rem;
+    }
+    
+    .result-rating i {
+        color: #f5c518;
+        margin-right: 0.25rem;
+    }
+    
+    .result-type {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        text-transform: capitalize;
+    }
+    
+    .no-results {
+        text-align: center;
+        padding: 4rem 0;
+    }
+    
+    .no-results i {
+        font-size: 3rem;
+        color: #e50914;
+        margin-bottom: 1rem;
+    }
+    
+    .no-results h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .no-results p {
+        color: rgba(255, 255, 255, 0.7);
+        max-width: 500px;
+        margin: 0 auto 1.5rem;
+    }
+    
+    /* Loading Skeleton */
+    .skeleton {
+        background-color: #2a2a2a;
+        border-radius: 0.5rem;
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 0.6; }
+        50% { opacity: 0.3; }
+    }
+    
+    /* Responsive */
+    @media (max-width: 640px) {
+        .results-grid {
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1rem;
+        }
+        
+        .result-poster {
+            height: 210px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="search-results">
+    <div class="container mx-auto px-4">
+        <div class="search-header">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">
+                Search Results for <span class="search-query">"{{ query }}"</span>
+            </h1>
+            <p class="results-count">{{ results.total_results }} results found</p>
+        </div>
+        
+        {% if results.results %}
+            <div class="results-grid">
+                {% for item in results.results %}
+                    <a href="{% if item.media_type == 'movie' %}/movie/{{ item.id }}{% else %}/tv/{{ item.id }}{% endif %}" class="result-card group">
+                        <div class="relative">
+                            <img 
+                                src="{% if item.poster_path %}https://image.tmdb.org/t/p/w500{{ item.poster_path }}{% else %}/static/images/no-poster.jpg{% endif %}" 
+                                alt="{{ item.title or item.name }}" 
+                                class="result-poster"
+                                onerror="this.src='/static/images/no-poster.jpg'"
+                            >
+                            <span class="result-type">
+                                {% if item.media_type == 'movie' %}
+                                    <i class="fas fa-film mr-1"></i> Movie
+                                {% else %}
+                                    <i class="fas fa-tv mr-1"></i> TV Show
+                                {% endif %}
+                            </span>
+                            <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                <button class="bg-primary text-white rounded-full w-12 h-12 flex items-center justify-center transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="result-info">
+                            <h3 class="result-title" title="{{ item.title or item.name }}">
+                                {{ item.title or item.name }}
+                            </h3>
+                            <div class="result-meta">
+                                <span class="result-rating">
+                                    <i class="fas fa-star"></i>
+                                    {{ "%0.1f"|format(item.vote_average|default(0)) }}
+                                </span>
+                                <span>
+                                    {{ (item.release_date or item.first_air_date or 'N/A')[:4] }}
+                                </span>
+                            </div>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if results.total_pages > 1 %}
+                <div class="flex justify-center mt-8">
+                    <div class="flex items-center space-x-2">
+                        {% if results.page > 1 %}
+                            <a href="?q={{ query }}&page={{ results.page - 1 }}" class="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 transition-colors">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        {% endif %}
+                        
+                        <span class="px-4 py-2 bg-gray-800 rounded-md">
+                            Page {{ results.page }} of {{ results.total_pages }}
+                        </span>
+                        
+                        {% if results.page < results.total_pages %}
+                            <a href="?q={{ query }}&page={{ results.page + 1 }}" class="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 transition-colors">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+            
+        {% else %}
+            <div class="no-results">
+                <i class="fas fa-search"></i>
+                <h2>No results found for "{{ query }}"</h2>
+                <p>We couldn't find any movies or TV shows matching your search. Try different keywords or check the spelling.</p>
+                <a href="/" class="btn btn-primary">
+                    <i class="fas fa-home mr-2"></i> Back to Home
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Search form submission
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchForm = document.getElementById('search-form');
+        const searchInput = document.getElementById('search-input');
+        
+        if (searchForm) {
+            searchForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const query = searchInput.value.trim();
+                if (query) {
+                    window.location.href = `/search?q=${encodeURIComponent(query)}`;
+                }
+            });
+        }
+        
+        // Highlight search query in results
+        const searchQuery = '{{ query }}';
+        if (searchQuery) {
+            const elements = document.querySelectorAll('.search-query');
+            elements.forEach(el => {
+                el.textContent = searchQuery;
+            });
+        }
+    });
+</script>
+{% endblock %}

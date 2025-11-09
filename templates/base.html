@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Cinextma - Watch HD Movies & TV Shows{% endblock %}</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#e50914',
+                        'primary-hover': '#f40612',
+                        dark: '#141414',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    height: {
+                        'hero': '80vh',
+                        'hero-mobile': '60vh',
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-dark text-gray-100 min-h-screen flex flex-col">
+    <!-- Navigation -->
+    <nav class="bg-dark border-b border-gray-800 fixed w-full z-50">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <!-- Left Section -->
+                <div class="flex items-center space-x-8">
+                    <!-- Logo -->
+                    <a href="/" class="flex items-center space-x-2 text-2xl font-bold text-primary">
+                        <i class="fas fa-film"></i>
+                        <span>Cinextma</span>
+                    </a>
+                    
+                    <!-- Desktop Navigation -->
+                    <div class="hidden md:flex items-center space-x-6">
+                        <a href="/" class="nav-link active">
+                            <i class="fas fa-home mr-1"></i> Home
+                        </a>
+                        <a href="#trending" class="nav-link">
+                            <i class="fas fa-fire mr-1"></i> Trending
+                        </a>
+                        <a href="#movies" class="nav-link">
+                            <i class="fas fa-film mr-1"></i> Movies
+                        </a>
+                        <a href="#tv-shows" class="nav-link">
+                            <i class="fas fa-tv mr-1"></i> TV Shows
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Search Bar -->
+                <div class="hidden md:block w-1/3">
+                    <form action="/search" method="get" class="flex items-center">
+                        <input 
+                            type="text" 
+                            name="q" 
+                            id="search-input"
+                            placeholder="Search movies and TV shows..." 
+                            class="w-full bg-gray-800 text-white px-4 py-2 rounded-l-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                            required
+                        >
+                        <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-r-md transition-colors">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Mobile Search Button -->
+                <div class="md:hidden">
+                    <button id="search-mobile-button" class="text-gray-400 hover:text-white focus:outline-none">
+                        <i class="fas fa-search text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <button id="mobile-menu-button" class="md:hidden text-gray-400 hover:text-white focus:outline-none">
+                <i class="fas fa-bars text-2xl"></i>
+            </button>
+        </div>
+    </nav>
+    
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="hidden md:hidden fixed inset-0 bg-gray-900 z-40 pt-16">
+        <div class="container mx-auto px-4 py-6 space-y-4">
+            <a href="/" class="block px-4 py-2 text-lg font-medium text-white hover:bg-gray-800 rounded-lg">
+                <i class="fas fa-home mr-2 w-6"></i> Home
+            </a>
+            <a href="#trending" class="block px-4 py-2 text-lg font-medium text-gray-300 hover:bg-gray-800 rounded-lg">
+                <i class="fas fa-fire mr-2 w-6"></i> Trending
+            </a>
+            <a href="#popular" class="block px-4 py-2 text-lg font-medium text-gray-300 hover:bg-gray-800 rounded-lg">
+                <i class="fas fa-star mr-2 w-6"></i> Popular
+            </a>
+            <a href="#top-rated" class="block px-4 py-2 text-lg font-medium text-gray-300 hover:bg-gray-800 rounded-lg">
+                <i class="fas fa-trophy mr-2 w-6"></i> Top Rated
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="pt-16 flex-grow">
+        {% block content %}{% endblock %}
+        
+        <!-- Back to Top Button -->
+        <button id="back-to-top" class="fixed bottom-8 right-8 bg-primary hover:bg-primary-hover text-white w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 opacity-0 invisible z-40">
+            <i class="fas fa-arrow-up text-xl"></i>
+        </button>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="bg-dark border-t border-gray-800 py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <h3 class="text-xl font-bold text-primary mb-4 flex items-center">
+                        <i class="fas fa-film mr-2"></i> Cinextma
+                    </h3>
+                    <p class="text-gray-400 mb-4">Your ultimate destination for discovering and streaming the best movies and TV shows.</p>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                            <i class="fab fa-facebook-f"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                            <i class="fab fa-instagram"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white transition-colors">
+                            <i class="fab fa-youtube"></i>
+                        </a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold text-white mb-4">Browse</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Movies</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">TV Shows</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Trending</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Coming Soon</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Top Rated</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold text-white mb-4">Help</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Account & Billing</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Plans & Pricing</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Supported Devices</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">FAQ</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Contact Us</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold text-white mb-4">Legal</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Terms of Service</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Cookie Policy</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">DMCA</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition-colors">Sitemap</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 pt-8 text-center text-gray-500 text-sm">
+                <p> 2023 Cinextma. All rights reserved. This product uses the TMDb API but is not endorsed or certified by TMDb.</p>
+                <p class="mt-2">Data provided by <a href="https://www.themoviedb.org/" target="_blank" class="text-primary hover:underline">The Movie Database</a>.</p>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Scripts -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="/static/js/main.js"></script>
+    
+    {% block extra_js %}{% endblock %}
+    
+    <script>
+        // Mobile menu toggle
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        
+        if (mobileMenuButton && mobileMenu) {
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+        }
+        
+        // Back to top button
+        const backToTopButton = document.getElementById('back-to-top');
+        
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                backToTopButton.classList.remove('opacity-0', 'invisible');
+                backToTopButton.classList.add('opacity-100', 'visible');
+            } else {
+                backToTopButton.classList.remove('opacity-100', 'visible');
+                backToTopButton.classList.add('opacity-0', 'invisible');
+            }
+        });
+        
+        if (backToTopButton) {
+            backToTopButton.addEventListener('click', () => {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+        }
+        
+        // Search functionality
+        const searchInput = document.getElementById('search-input');
+        const searchResults = document.getElementById('search-results');
+        
+        if (searchInput && searchResults) {
+            searchInput.addEventListener('focus', () => {
+                searchResults.classList.remove('hidden');
+            });
+            
+            document.addEventListener('click', (e) => {
+                if (!searchResults.contains(e.target) && e.target !== searchInput) {
+                    searchResults.classList.add('hidden');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

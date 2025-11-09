@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+
+{% block title %}🎬 Cinextma - Stream HD Movies & TV Shows{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Hero Section */
+    .hero-section {
+        min-height: 400px;
+        background: linear-gradient(to right, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.4) 100%);
+        position: relative;
+        display: flex;
+        align-items: center;
+        margin-bottom: 2rem;
+        border-radius: 1rem;
+        overflow: hidden;
+    }
+    
+    .hero-content {
+        padding: 2rem;
+        max-width: 800px;
+        position: relative;
+        z-index: 2;
+    }
+    
+    .hero-title {
+        font-size: 3rem;
+        font-weight: 800;
+        line-height: 1.1;
+        margin-bottom: 1rem;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
+    
+    .hero-description {
+        font-size: 1.25rem;
+        color: rgba(255, 255, 255, 0.9);
+        margin-bottom: 2rem;
+        line-height: 1.6;
+    }
+    
+    /* Section Headers */
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: white;
+    }
+    
+    .view-all {
+        color: #3b82f6;
+        font-weight: 600;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+    
+    .view-all:hover {
+        color: #60a5fa;
+        text-decoration: underline;
+    }
+    
+    /* Movie/Show Cards */
+    .media-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+    }
+    
+    .media-card {
+        position: relative;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        background-color: #1a1a1a;
+    }
+    
+    .media-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+    
+    .media-poster {
+        width: 100%;
+        height: 240px;
+        object-fit: cover;
+        border-radius: 0.5rem 0.5rem 0 0;
+    }
+    
+    .media-info {
+        padding: 1rem;
+    }
+    
+    .media-title {
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: white;
+    }
+    
+    .media-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.85rem;
+        color: #9ca3af;
+    }
+    
+    .rating {
+        display: flex;
+        align-items: center;
+        color: #fbbf24;
+        font-weight: 600;
+    }
+    
+    .rating i {
+        margin-right: 0.25rem;
+        color: #fbbf24;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2rem;
+        }
+        
+        .hero-description {
+            font-size: 1rem;
+        }
+        
+        .media-grid {
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1rem;
+        }
+        
+        .media-poster {
+            height: 200px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="hero-content">
+            <h1 class="hero-title">Stream Movies & TV Shows Instantly</h1>
+            <p class="hero-description">Watch your favorite content with just one click. No subscriptions, no ads, just pure entertainment.</p>
+        </div>
+    </div>
+
+    <!-- Trending Movies -->
+    {% if trending_movies %}
+    <section class="mb-12">
+        <div class="section-header">
+            <h2 class="section-title">Trending Movies</h2>
+            <a href="/trending/movie" class="view-all">View All</a>
+        </div>
+        <div class="media-grid">
+            {% for movie in trending_movies[:12] %}
+            <a href="/watch/movie/{{ movie.id }}" class="media-card">
+                <img 
+                    src="{% if movie.poster_path %}{{ config.TMDB_IMAGE_BASE }}w500{{ movie.poster_path }}{% else %}/static/images/no-poster.jpg{% endif %}" 
+                    alt="{{ movie.title }}" 
+                    class="media-poster"
+                    onerror="this.src='/static/images/no-poster.jpg'"
+                >
+                <div class="media-info">
+                    <h3 class="media-title">{{ movie.title[:25] }}{% if movie.title|length > 25 %}...{% endif %}</h3>
+                    <div class="media-meta">
+                        <span>{{ movie.release_date[:4] if movie.release_date else 'N/A' }}</span>
+                        <span class="rating">
+                            <i class="fas fa-star"></i> {{ "%.1f"|format(movie.vote_average) if movie.vote_average is defined else 'N/A' }}
+                        </span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Popular Movies -->
+    {% if popular_movies %}
+    <section class="mb-12">
+        <div class="section-header">
+            <h2 class="section-title">Popular Movies</h2>
+            <a href="/popular/movie" class="view-all">View All</a>
+        </div>
+        <div class="media-grid">
+            {% for movie in popular_movies[:12] %}
+            <a href="/watch/movie/{{ movie.id }}" class="media-card">
+                <img 
+                    src="{% if movie.poster_path %}{{ config.TMDB_IMAGE_BASE }}w500{{ movie.poster_path }}{% else %}/static/images/no-poster.jpg{% endif %}" 
+                    alt="{{ movie.title }}" 
+                    class="media-poster"
+                    onerror="this.src='/static/images/no-poster.jpg'"
+                >
+                <div class="media-info">
+                    <h3 class="media-title">{{ movie.title[:25] }}{% if movie.title|length > 25 %}...{% endif %}</h3>
+                    <div class="media-meta">
+                        <span>{{ movie.release_date[:4] if movie.release_date else 'N/A' }}</span>
+                        <span class="rating">
+                            <i class="fas fa-star"></i> {{ "%.1f"|format(movie.vote_average) if movie.vote_average is defined else 'N/A' }}
+                        </span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Top Rated Movies -->
+    {% if top_rated_movies %}
+    <section class="mb-12">
+        <div class="section-header">
+            <h2 class="section-title">Top Rated Movies</h2>
+            <a href="/top_rated/movie" class="view-all">View All</a>
+        </div>
+        <div class="media-grid">
+            {% for movie in top_rated_movies[:12] %}
+            <a href="/watch/movie/{{ movie.id }}" class="media-card">
+                <img 
+                    src="{% if movie.poster_path %}{{ config.TMDB_IMAGE_BASE }}w500{{ movie.poster_path }}{% else %}/static/images/no-poster.jpg{% endif %}" 
+                    alt="{{ movie.title }}" 
+                    class="media-poster"
+                    onerror="this.src='/static/images/no-poster.jpg'"
+                >
+                <div class="media-info">
+                    <h3 class="media-title">{{ movie.title[:25] }}{% if movie.title|length > 25 %}...{% endif %}</h3>
+                    <div class="media-meta">
+                        <span>{{ movie.release_date[:4] if movie.release_date else 'N/A' }}</span>
+                        <span class="rating">
+                            <i class="fas fa-star"></i> {{ "%.1f"|format(movie.vote_average) if movie.vote_average is defined else 'N/A' }}
+                        </span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Trending TV Shows -->
+    {% if trending_tv %}
+    <section class="mb-12">
+        <div class="section-header">
+            <h2 class="section-title">Trending TV Shows</h2>
+            <a href="/trending/tv" class="view-all">View All</a>
+        </div>
+        <div class="media-grid">
+            {% for show in trending_tv[:12] %}
+            <a href="/watch/tv/{{ show.id }}" class="media-card">
+                <img 
+                    src="{% if show.poster_path %}{{ config.TMDB_IMAGE_BASE }}w500{{ show.poster_path }}{% else %}/static/images/no-poster.jpg{% endif %}" 
+                    alt="{{ show.name }}" 
+                    class="media-poster"
+                    onerror="this.src='/static/images/no-poster.jpg'"
+                >
+                <div class="media-info">
+                    <h3 class="media-title">{{ show.name[:25] }}{% if show.name|length > 25 %}...{% endif %}</h3>
+                    <div class="media-meta">
+                        <span>{{ show.first_air_date[:4] if show.first_air_date else 'N/A' }}</span>
+                        <span class="rating">
+                            <i class="fas fa-star"></i> {{ "%.1f"|format(show.vote_average) if show.vote_average is defined else 'N/A' }}
+                        </span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Popular TV Shows -->
+    {% if popular_tv %}
+    <section class="mb-12">
+        <div class="section-header">
+            <h2 class="section-title">Popular TV Shows</h2>
+            <a href="/popular/tv" class="view-all">View All</a>
+        </div>
+        <div class="media-grid">
+            {% for show in popular_tv[:12] %}
+            <a href="/watch/tv/{{ show.id }}" class="media-card">
+                <img 
+                    src="{% if show.poster_path %}{{ config.TMDB_IMAGE_BASE }}w500{{ show.poster_path }}{% else %}/static/images/no-poster.jpg{% endif %}" 
+                    alt="{{ show.name }}" 
+                    class="media-poster"
+                    onerror="this.src='/static/images/no-poster.jpg'"
+                >
+                <div class="media-info">
+                    <h3 class="media-title">{{ show.name[:25] }}{% if show.name|length > 25 %}...{% endif %}</h3>
+                    <div class="media-meta">
+                        <span>{{ show.first_air_date[:4] if show.first_air_date else 'N/A' }}</span>
+                        <span class="rating">
+                            <i class="fas fa-star"></i> {{ "%.1f"|format(show.vote_average) if show.vote_average is defined else 'N/A' }}
+                        </span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Top Rated TV Shows -->
+    {% if top_rated_tv %}
+    <section class="mb-12">
+        <div class="section-header">
+            <h2 class="section-title">Top Rated TV Shows</h2>
+            <a href="/top_rated/tv" class="view-all">View All</a>
+        </div>
+        <div class="media-grid">
+            {% for show in top_rated_tv[:12] %}
+            <a href="/watch/tv/{{ show.id }}" class="media-card">
+                <img 
+                    src="{% if show.poster_path %}{{ config.TMDB_IMAGE_BASE }}w500{{ show.poster_path }}{% else %}/static/images/no-poster.jpg{% endif %}" 
+                    alt="{{ show.name }}" 
+                    class="media-poster"
+                    onerror="this.src='/static/images/no-poster.jpg'"
+                >
+                <div class="media-info">
+                    <h3 class="media-title">{{ show.name[:25] }}{% if show.name|length > 25 %}...{% endif %}</h3>
+                    <div class="media-meta">
+                        <span>{{ show.first_air_date[:4] if show.first_air_date else 'N/A' }}</span>
+                        <span class="rating">
+                            <i class="fas fa-star"></i> {{ "%.1f"|format(show.vote_average) if show.vote_average is defined else 'N/A' }}
+                        </span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add any custom JavaScript here if needed
+</script>
+{% endblock %}

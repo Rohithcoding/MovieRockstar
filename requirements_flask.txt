@@ -1,0 +1,26 @@
+# Flask Web Application Requirements
+# Core web framework and API dependencies
+
+Flask==2.3.3
+Flask-CORS==4.0.0
+
+# Data processing and machine learning
+pandas==2.1.1
+numpy==1.24.3
+scikit-learn==1.3.0
+
+# HTTP requests for OMDb API
+requests==2.31.0
+
+# Optional: For better performance and production deployment
+gunicorn==21.2.0
+Werkzeug==2.3.7
+
+# Optional: For environment variable management
+python-dotenv==1.0.0
+
+# Optional: For JSON handling and validation
+jsonschema==4.19.1
+
+# Optional: For logging and monitoring
+loguru==0.7.2

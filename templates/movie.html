@@ -1,0 +1,463 @@
+{% extends "base.html" %}
+
+{% block title %}{{ movie.title }} - Cinextma{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Movie Details */
+    .movie-hero {
+        position: relative;
+        min-height: 80vh;
+        background: linear-gradient(to right, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.4) 100%), 
+                    var(--backdrop-image) no-repeat center center/cover;
+        display: flex;
+        align-items: center;
+        margin-top: -64px;
+        padding: 6rem 0;
+    }
+    
+    /* Trailer Modal */
+    .trailer-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.9);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .trailer-modal iframe {
+        width: 80%;
+        height: 80%;
+        border: none;
+        border-radius: 8px;
+    }
+    
+    .close-modal {
+        position: absolute;
+        top: 20px;
+        right: 30px;
+        color: white;
+        font-size: 30px;
+        cursor: pointer;
+    }
+    
+    .movie-poster {
+        width: 100%;
+        max-width: 350px;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+    
+    .movie-details {
+        color: white;
+        max-width: 800px;
+    }
+    
+    .movie-title {
+        font-size: 3rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+        line-height: 1.1;
+    }
+    
+    .movie-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .movie-meta span {
+        display: inline-flex;
+        align-items: center;
+    }
+    
+    .movie-meta i {
+        margin-right: 0.5rem;
+        color: #e50914;
+    }
+    
+    .tagline {
+        font-style: italic;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 1.5rem;
+    }
+    
+    .overview {
+        margin-bottom: 2rem;
+        line-height: 1.7;
+        max-width: 800px;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 2rem 0 1.5rem;
+        color: white;
+        position: relative;
+        padding-bottom: 0.75rem;
+    }
+    
+    .section-title::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 60px;
+        height: 4px;
+        background: #e50914;
+        border-radius: 2px;
+    }
+    
+    .cast-scroll {
+        display: flex;
+        gap: 1.5rem;
+        overflow-x: auto;
+        padding-bottom: 1rem;
+        scrollbar-width: thin;
+        scrollbar-color: #e50914 transparent;
+    }
+    
+    .cast-scroll::-webkit-scrollbar {
+        height: 6px;
+    }
+    
+    .cast-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    
+    .cast-scroll::-webkit-scrollbar-thumb {
+        background-color: #e50914;
+        border-radius: 3px;
+    }
+    
+    .cast-card {
+        flex: 0 0 auto;
+        width: 140px;
+        text-align: center;
+    }
+    
+    .cast-photo {
+        width: 120px;
+        height: 180px;
+        border-radius: 0.5rem;
+        object-fit: cover;
+        margin-bottom: 0.75rem;
+        transition: transform 0.3s ease;
+    }
+    
+    .cast-card:hover .cast-photo {
+        transform: scale(1.05);
+    }
+    
+    .cast-name {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .cast-character {
+        font-size: 0.875rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .similar-movies {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+    
+    .similar-movie {
+        position: relative;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        transition: transform 0.3s ease;
+    }
+    
+    .similar-movie:hover {
+        transform: translateY(-5px);
+    }
+    
+    .similar-poster {
+        width: 100%;
+        height: 270px;
+        object-fit: cover;
+        border-radius: 0.5rem;
+    }
+    
+    .similar-title {
+        margin-top: 0.5rem;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .movie-hero {
+            flex-direction: column;
+            text-align: center;
+            padding: 5rem 0 3rem;
+        }
+        
+        .movie-poster {
+            margin-bottom: 2rem;
+            max-width: 250px;
+        }
+        
+        .movie-title {
+            font-size: 2rem;
+        }
+        
+        .movie-meta {
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Movie Hero Section -->
+<section class="movie-hero" style="--backdrop-image: url('https://image.tmdb.org/t/p/original{{ movie.backdrop_path }}')">
+    <div class="container mx-auto px-4">
+        <div class="flex flex-col md:flex-row items-start gap-8">
+            <!-- Movie Poster with Play Button -->
+            <div class="relative flex-shrink-0 group">
+                <img 
+                    src="{% if movie.poster_path %}{{ config.TMDB_IMAGE_BASE }}w500{{ movie.poster_path }}{% else %}/static/images/no-poster.jpg{% endif %}" 
+                    alt="{{ movie.title }}" 
+                    class="movie-poster"
+                    onerror="this.src='/static/images/no-poster.jpg'"
+                >
+                <a href="/watch/movie/{{ movie.id }}" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg">
+                    <div class="bg-red-600 hover:bg-red-700 text-white rounded-full w-16 h-16 flex items-center justify-center transform transition-transform group-hover:scale-110">
+                        <i class="fas fa-play text-2xl"></i>
+                    </div>
+                </a>
+            </div>
+            
+            <!-- Movie Details -->
+            <div class="movie-details">
+                <h1 class="movie-title">{{ movie.title }}</h1>
+                
+                <div class="movie-meta">
+                    <span><i class="fas fa-star text-yellow-400 mr-1"></i> {{ "%0.1f"|format(movie.vote_average|default(0)) }}/10</span>
+                    <span><i class="far fa-calendar-alt mr-1"></i> {{ movie.release_date[:4] if movie.release_date else 'N/A' }}</span>
+                    {% if movie.runtime %}
+                    <span><i class="far fa-clock mr-1"></i> {{ movie.runtime // 60 }}h {{ movie.runtime % 60 }}m</span>
+                    {% endif %}
+                    {% if movie.genres %}
+                    <span><i class="fas fa-tags mr-1"></i> {{ movie.genres|map(attribute='name')|join(', ') }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="movie-actions mb-6 flex flex-wrap gap-4">
+                    <!-- Play Now Button -->
+                    <a href="/watch/movie/{{ movie.id }}" class="btn btn-primary flex items-center px-6 py-3 rounded-md bg-red-600 hover:bg-red-700 text-white font-medium transition-colors">
+                        <i class="fas fa-play mr-2"></i> Play Now
+                    </a>
+                    
+                    <!-- Watch Trailer Button -->
+                    {% if trailer %}
+                    <button id="trailer-button" class="btn btn-outline flex items-center px-6 py-3 rounded-md border-2 border-gray-600 hover:border-white text-white font-medium transition-colors">
+                        <i class="fas fa-play-circle mr-2"></i> Watch Trailer
+                    </button>
+                    {% endif %}
+                    
+                    <!-- Watchlist Button -->
+                    <button id="add-to-watchlist" class="btn btn-outline flex items-center px-6 py-3 rounded-md border-2 border-gray-600 hover:border-white text-white font-medium transition-colors">
+                        <i class="fas fa-plus mr-2"></i> Add to Watchlist
+                    </button>
+                </div>
+                
+                <!-- Streaming Providers -->
+                {% if providers and providers.results.US and (providers.results.US.flatrate or providers.results.US.rent or providers.results.US.buy) %}
+                <div class="streaming-providers mb-8">
+                    <h3 class="text-xl font-semibold mb-3">Where to Watch</h3>
+                    <div class="flex flex-wrap gap-4">
+                        {% if providers.results.US.flatrate %}
+                        <div>
+                            <p class="text-gray-400 text-sm mb-2">Stream</p>
+                            <div class="flex gap-3">
+                                {% for provider in providers.results.US.flatrate %}
+                                <img src="{{ config.TMDB_IMAGE_BASE }}w92{{ provider.logo_path }}" alt="{{ provider.provider_name }}" class="w-10 h-10 rounded-md bg-white p-1">
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if providers.results.US.rent %}
+                        <div>
+                            <p class="text-gray-400 text-sm mb-2">Rent</p>
+                            <div class="flex gap-3">
+                                {% for provider in providers.results.US.rent %}
+                                <img src="{{ config.TMDB_IMAGE_BASE }}w92{{ provider.logo_path }}" alt="{{ provider.provider_name }}" class="w-10 h-10 rounded-md bg-white p-1">
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if providers.results.US.buy %}
+                        <div>
+                            <p class="text-gray-400 text-sm mb-2">Buy</p>
+                            <div class="flex gap-3">
+                                {% for provider in providers.results.US.buy %}
+                                <img src="{{ config.TMDB_IMAGE_BASE }}w92{{ provider.logo_path }}" alt="{{ provider.provider_name }}" class="w-10 h-10 rounded-md bg-white p-1">
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if movie.tagline %}
+                    <p class="tagline">"{{ movie.tagline }}"</p>
+                {% endif %}
+                
+                <div class="overview">
+                    <h3 class="text-xl font-semibold mb-2">Overview</h3>
+                    <p>{{ movie.overview|default('No overview available.') }}</p>
+                </div>
+                
+                <div class="flex flex-wrap gap-4">
+                    {% if movie.homepage %}
+                        <a href="{{ movie.homepage }}" target="_blank" class="btn btn-primary">
+                            <i class="fas fa-globe mr-2"></i> Official Website
+                        </a>
+                    {% endif %}
+                    {% if movie.imdb_id %}
+                        <a href="https://www.imdb.com/title/{{ movie.imdb_id }}" target="_blank" class="btn btn-secondary">
+                            <i class="fab fa-imdb mr-2"></i> View on IMDb
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Main Content -->
+<div class="container mx-auto px-4 py-8">
+    <!-- Cast Section -->
+    {% if credits and credits.cast %}
+        <div class="cast-section">
+            <h2 class="section-title">Cast</h2>
+            <div class="cast-scroll">
+                {% for actor in credits.cast|slice(0, 10) %}
+                    <div class="cast-card">
+                        <a href="#" class="block">
+                            <img 
+                                src="{% if actor.profile_path %}https://image.tmdb.org/t/p/w200{{ actor.profile_path }}{% else %}/static/images/no-avatar.jpg{% endif %}" 
+                                alt="{{ actor.name }}" 
+                                class="cast-photo mx-auto"
+                                onerror="this.src='/static/images/no-avatar.jpg'"
+                            >
+                            <h4 class="cast-name">{{ actor.name }}</h4>
+                            <p class="cast-character">{{ actor.character|default('N/A') }}</p>
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+    
+    <!-- Similar Movies -->
+    {% if similar and similar.results %}
+        <div class="similar-section mt-12">
+            <h2 class="section-title">Similar Movies</h2>
+            <div class="similar-movies">
+                {% for similar_movie in similar.results|slice(0, 5) %}
+                    <a href="/movie/{{ similar_movie.id }}" class="similar-movie">
+                        <img 
+                            src="{% if similar_movie.poster_path %}https://image.tmdb.org/t/p/w500{{ similar_movie.poster_path }}{% else %}/static/images/no-poster.jpg{% endif %}" 
+                            alt="{{ similar_movie.title }}" 
+                            class="similar-poster"
+                            onerror="this.src='/static/images/no-poster.jpg'"
+                        >
+                        <h4 class="similar-title">{{ similar_movie.title }}</h4>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% block extra_js %}
+    <!-- Trailer Modal -->
+    <div id="trailer-modal" class="trailer-modal">
+        <span class="close-modal">&times;</span>
+        {% if trailer %}
+        <iframe 
+            src="{{ config.YOUTUBE_EMBED_URL }}{{ trailer.key }}" 
+            frameborder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+            allowfullscreen>
+        </iframe>
+        {% endif %}
+    </div>
+
+    <script>
+        // Back to top button functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const backToTopButton = document.getElementById('back-to-top');
+            const trailerButton = document.getElementById('trailer-button');
+            const trailerModal = document.getElementById('trailer-modal');
+            const closeModal = document.querySelector('.close-modal');
+            const trailerVideo = trailerModal.querySelector('iframe');
+            
+            // Back to top button
+            window.onscroll = function() {
+                if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
+                    backToTopButton.classList.remove('opacity-0', 'invisible');
+                    backToTopButton.classList.add('opacity-100', 'visible');
+                } else {
+                    backToTopButton.classList.remove('opacity-100', 'visible');
+                    backToTopButton.classList.add('opacity-0', 'invisible');
+                }
+            };
+            
+            backToTopButton.addEventListener('click', function() {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            });
+            
+            // Trailer modal functionality
+            if (trailerButton) {
+                trailerButton.addEventListener('click', function() {
+                    trailerModal.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                });
+            }
+            
+            closeModal.addEventListener('click', function() {
+                trailerModal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+                
+                // Pause video when modal is closed
+                const iframeSrc = trailerVideo.src;
+                trailerVideo.src = iframeSrc;
+            });
+            
+            // Close modal when clicking outside the iframe
+            window.addEventListener('click', function(event) {
+                if (event.target === trailerModal) {
+                    trailerModal.style.display = 'none';
+                    document.body.style.overflow = 'auto';
+                    
+                    // Pause video when modal is closed
+                    const iframeSrc = trailerVideo.src;
+                    trailerVideo.src = iframeSrc;
+                }
+            });
+        });
+    </script>
+    {% endblock %}
