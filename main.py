@@ -69,35 +69,59 @@ class TMDBClient:
             self.session = aiohttp.ClientSession()
         return self.session
 
-    async def _make_request(self, endpoint: str, params: Optional[Dict] = None, max_retries: int = 3) -> Any:
-        import asyncio
-        import random
-        from urllib.parse import urljoin, urlencode
+    async def _make_request(
+        self, 
+        endpoint: str, 
+        params: Optional[Dict] = None, 
+        max_retries: int = 3
+    ) -> Any:
+        """
+        Make an async HTTP request to TMDB API with retry logic.
         
+        Args:
+            endpoint: TMDB API endpoint (e.g., 'movie/popular')
+            params: Query parameters
+            max_retries: Maximum retry attempts
+            
+        Returns:
+            Parsed JSON response
+            
+        Raises:
+            HTTPException: If all retries fail
+        """
+        # Initialize params and headers
         params = params or {}
         params['api_key'] = self.api_key
+        headers = {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json;charset=utf-8'
+        }
         
-        # Ensure base_url ends with a slash
-        base_url = self.base_url.rstrip('/') + '/'
-        # Ensure endpoint doesn't start with a slash
+        # Build URL
+        base_url = self.base_url.rstrip('/')
         endpoint = endpoint.lstrip('/')
+        url = f"{base_url}/{endpoint}"
         
-        # Construct the full URL
-        url = urljoin(base_url, endpoint)
-        
-        # For GET requests, include params in the URL if there's already a query string
-        if '?' in endpoint:
-            url = f"{url}&{urlencode(params)}"
-            params = {}
-        
+        # Initialize last exception
         last_exception = None
         
+        # Retry loop
         for attempt in range(max_retries):
             try:
-                # Create a new session for each attempt
-                async with aiohttp.ClientSession() as session:
-                    # Log the request
-                    print(f"Attempt {attempt + 1}/{max_retries} - Requesting: {url}")
+                # Get or create session
+                session = await self.get_session()
+                
+                # Log the request
+                logger.debug(f"Request attempt {attempt + 1}/{max_retries}: {url} with params: {params}")
+                
+                # Make request with timeout
+                timeout = aiohttp.ClientTimeout(total=10)
+                async with session.get(
+                    url,
+                    params=params,
+                    headers=headers,
+                    timeout=timeout
+                ) as response:
                     
                     # Make the request
                     async with session.get(
