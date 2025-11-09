@@ -32,13 +32,16 @@ class TMDBClient:
         self.headers = {
             "Content-Type": "application/json;charset=utf-8"
         }
-        self.session = requests.Session()
+        self.session = None
+
+    async def get_session(self):
+        if self.session is None or self.session.closed:
+            self.session = aiohttp.ClientSession()
+        return self.session
 
     async def _make_request(self, endpoint: str, params: Optional[Dict] = None, max_retries: int = 3) -> Any:
-        import asyncio
         import random
-        import traceback
-        from urllib.parse import urljoin
+        from urllib.parse import urljoin, urlencode
         
         params = params or {}
         params['api_key'] = self.api_key
@@ -56,16 +59,42 @@ class TMDBClient:
             url = f"{url}&{urlencode(params)}"
             params = {}
         
-        last_exception = None
+        async with await self.get_session() as session:
+            for attempt in range(max_retries):
+                try:
+                    async with session.get(url, params=params, headers=self.headers) as response:
+                        if response.status == 200:
+                            return await response.json()
+                        elif response.status == 429:  # Rate limited
+                            retry_after = int(response.headers.get('Retry-After', 1))
+                            await asyncio.sleep(retry_after)
+                            continue
+                        
+                        # If we get here, the request failed with a non-200 status
+                        if attempt == max_retries - 1:
+                            error_text = await response.text()
+                            print(f"TMDB API error: {response.status} - {error_text}")
+                            raise HTTPException(
+                                status_code=response.status, 
+                                detail=f"Failed to fetch data from TMDB: {response.status} - {error_text}"
+                            )
+                        
+                        await asyncio.sleep(1 + random.random())  # Exponential backoff
+                        
+                except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+                    if attempt == max_retries - 1:
+                        print(f"Request failed after {max_retries} attempts: {str(e)}")
+                        raise HTTPException(
+                            status_code=500, 
+                            detail=f"Failed to fetch data from TMDB: {str(e)}"
+                        )
+                    await asyncio.sleep(1 + random.random())  # Exponential backoff
+                    continue
         
-        print(f"\nMaking request to: {url}")
-        print(f"Params: {params}")
-        
-        for attempt in range(max_retries):
-            try:
-                async with aiohttp.ClientSession() as session:
-                    # Use minimal headers
-                    headers = {
+        raise HTTPException(
+            status_code=500, 
+            detail="Failed to fetch data from TMDB after multiple attempts"
+        )
                         'Accept': 'application/json',
                         'Content-Type': 'application/json;charset=utf-8'
                     }
