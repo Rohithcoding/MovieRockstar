@@ -331,35 +331,70 @@ async def get_top_rated_movies(page: int = 1):
     results = await tmdb_client.get_top_rated_movies(page)
     return JSONResponse({"results": results})
 
+# Static files for favicon
+@app.get('/favicon.ico', include_in_schema=False)
+async def favicon():
+    from fastapi.responses import FileResponse
+    import os
+    favicon_path = os.path.join(BASE_DIR, "static", "favicon.ico")
+    if os.path.exists(favicon_path):
+        return FileResponse(favicon_path)
+    return ""
+
 # Frontend Routes
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     try:
-        # Get trending, popular, and top-rated for both movies and TV shows
-        trending_movies = await tmdb_client.get_trending("movie")
-        trending_tv = await tmdb_client.get_trending("tv")
-        popular_movies = await tmdb_client.get_popular_movies()
-        top_rated_movies = await tmdb_client.get_top_rated_movies()
-        popular_tv = await tmdb_client.get_popular_tv()
-        top_rated_tv = await tmdb_client.get_top_rated_tv()
+        logger.info("Root endpoint called")
         
-        return templates.TemplateResponse(
-            "index.html",
-            {
-                "request": request,
-                "trending_movies": trending_movies[:20],
-                "trending_tv": trending_tv[:20],
-                "popular_movies": popular_movies[:20],
-                "top_rated_movies": top_rated_movies[:20],
-                "popular_tv": popular_tv[:20],
-                "top_rated_tv": top_rated_tv[:20],
-                "config": {
-                    "TMDB_IMAGE_BASE": TMDB_IMAGE_BASE_URL,
-                    "TMDB_API_KEY": TMDB_API_KEY
-                }
-            }
-        )
+        # Initialize with empty lists in case of errors
+        trending_movies = {"results": []}
+        trending_tv = {"results": []}
+        popular_movies = {"results": []}
+        top_rated_movies = {"results": []}
+        
+        # Get data with individual error handling for each API call
+        try:
+            trending_movies = await tmdb_client.get_trending("movie", "day") or {"results": []}
+        except Exception as e:
+            logger.error(f"Error getting trending movies: {str(e)}")
+            
+        try:
+            trending_tv = await tmdb_client.get_trending("tv", "day") or {"results": []}
+        except Exception as e:
+            logger.error(f"Error getting trending TV: {str(e)}")
+            
+        try:
+            popular_movies = await tmdb_client.get_popular_movies() or {"results": []}
+        except Exception as e:
+            logger.error(f"Error getting popular movies: {str(e)}")
+            
+        try:
+            top_rated_movies = await tmdb_client.get_top_rated_movies() or {"results": []}
+        except Exception as e:
+            logger.error(f"Error getting top rated movies: {str(e)}")
+        
+        # Log the data being sent to the template
+        logger.info(f"Sending data to template - Movies: {len(trending_movies.get('results', []))}, TV: {len(trending_tv.get('results', []))}")
+        
+        return templates.TemplateResponse("index.html", {
+            "request": request,
+            "trending_movies": trending_movies.get("results", [])[:10],
+            "trending_tv": trending_tv.get("results", [])[:10],
+            "popular_movies": popular_movies.get("results", [])[:10],
+            "top_rated_movies": top_rated_movies.get("results", [])[:10],
+            "title": "Movie Rockstar - Discover Movies & TV Shows"
+        })
+        
     except Exception as e:
+        error_msg = f"Error in read_root: {str(e)}\n{traceback.format_exc()}"
+        logger.error(error_msg)
+        # Return a simple error page instead of raising an exception
+        return templates.TemplateResponse("error.html", {
+            "request": request,
+            "error": "We're having trouble loading the homepage. Please try again later.",
+            "details": str(e)
+        }, status_code=500)
         print(f"Error in read_root: {str(e)}")
         import traceback
         traceback.print_exc()
