@@ -1,74 +1,48 @@
-# Python cache and build artifacts
+# datasets and binary artifacts
+*.csv
+*.sqlite
+*.db
+data/
+datasets/
+notebooks/
+*.ipynb
+*.h5
+
+# Python caches
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.python-version
-.pytest_cache/
-.coverage
-htmlcov/
+*.pyc
+*.pyo
+*.pyd
 
-# Virtual Environment
-venv/
-env/
-.venv/
-ENV/
-
-# IDE
+# OS / Editor
+.DS_Store
 .vscode/
 .idea/
-*.swp
-*.swo
 
-# Local development
+# build / local env
 .env
 .env.local
 .env.*.local
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Large data files
-*.csv
-*.dat
-*.data
-*.db
-*.sql
-*.sqlite
-*.sqlite3
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Local development
-.local/
-
-# Vercel
-.vercel/
-
-# Test files
-*.pyc
-.coverage
-htmlcov/
-*.egg
-
-# Virtual Environment
 venv/
-ENV/
-env/
+.envrc
+pip-wheel-metadata/
+build/
+dist/
 
-# Environment variables
-.env
+# optional - exclude heavy helpers you don't need in runtime
+movie_posters.py
+movie_database_generator.py
+movie_recommender.py
+ai_movie_app_clean.py
+comprehensive_movie_database.py
+indian_movies_dataset.csv
+
+# Keep these files - don't ignore them
+!app.py
+!main.py
+!streamlit_app.py
+!requirements.txt
+!runtime.txt
 
 # IDE
 .idea/
