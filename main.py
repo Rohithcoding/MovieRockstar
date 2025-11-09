@@ -1,6 +1,13 @@
 import aiohttp
 import asyncio
+import logging
+import traceback
 from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -11,7 +18,30 @@ from pathlib import Path
 from typing import List, Dict, Optional, Any
 from datetime import datetime
 
-app = FastAPI(title="Cinextma Clone")
+app = FastAPI(
+    title="Movie Rockstar",
+    debug=True,
+    docs_url="/docs",
+    redoc_url=None
+)
+
+# Add middleware for better error handling
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    try:
+        response = await call_next(request)
+        return response
+    except Exception as e:
+        logger.error(f"Unhandled exception: {str(e)}")
+        logger.error(traceback.format_exc())
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": "Internal server error",
+                "error": str(e),
+                "traceback": traceback.format_exc()
+            }
+        )
 
 # Get base directory
 BASE_DIR = Path(__file__).parent
@@ -241,6 +271,11 @@ class TMDBClient:
 
 # Initialize TMDB client with API key
 tmdb_client = TMDBClient(api_key=TMDB_API_KEY)
+
+# Health Check Endpoint
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "message": "Service is running"}
 
 # API Endpoints
 @app.get("/api/trending")
